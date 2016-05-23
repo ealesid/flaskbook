@@ -1,11 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Flaskbook</title>
-</head>
-<body>
-    <h1>Hello!!!</h1>
+{% extends "base.html" %}
+
+{% block title %}Flaskbook{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>Hello!</h1>
     <p>{{ ua }}</p>
-</body>
-</html>
+</div>
+{% endblock %}
