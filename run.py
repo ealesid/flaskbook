@@ -1,7 +1,9 @@
 from flask import Flask, request, render_template, session, redirect, url_for, flash
-from flask_script import Manager
+from flask_mongoengine import MongoEngine
+from flask_script import Manager, Server
 from flask_bootstrap import Bootstrap
 from flask_wtf import Form
+from mongoengine import connect
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 
@@ -11,27 +13,65 @@ class NameForm(Form):
     submit = SubmitField('Submit')
 
 
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret_key'
+app.config['MONGODB_SETTINGS'] = {'DB': 'test'}
 manager = Manager(app)
+manager.add_command('runserver', Server(
+    use_debugger=True,
+    use_reloader=True,
+    host='0.0.0.0'
+))
 bs = Bootstrap(app)
 
+db = MongoEngine(app)
+
+class Role(db.Document):
+    # id = db.IntField(primary_key=True)
+    name = db.StringField(max_length=True, unique=True)
+
+    def __repr__(self):
+        return '<Role %r>' % self.name
+
+
+class User(db.Document):
+    # id = db.IntField(primary_key=True)
+    username = db.StringField(max_length=64, unique=True)
+
+    def __repr__(self):
+        return '<User %r>' % self.username
+
+### Before database implementation
+# @app.route('/', methods=['GET', 'POST'])
+# def index():
+#     name = None
+#     form = NameForm()
+#     if form.validate_on_submit():
+#         old_name = session.get('name')
+#         if old_name is not None and old_name != form.name.data:
+#             flash('Looks like you have changed your name!')
+#         session['name'] = form.name.data
+#         form.name.data = ''
+#         return redirect(url_for('index'))
+#     ua = request.headers.get('User-Agent')
+#     # return '<h1>Hello!!!</h1><p>Your browser is %s</p>' % ua
+#     return render_template('index.html', ua=ua, form=form, name=session.get('name'))
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    name = None
     form = NameForm()
     if form.validate_on_submit():
-        old_name = session.get('name')
-        if old_name is not None and old_name != form.name.data:
-            flash('Looks like you have changed your name!')
+        user = User.objects(username__exact=form.name.data).first()
+        if user is None:
+            user = User(username=form.name.data)
+            user.save()
+            session['known'] = False
+        else: session['known'] = True
         session['name'] = form.name.data
         form.name.data = ''
         return redirect(url_for('index'))
-    ua = request.headers.get('User-Agent')
-    # return '<h1>Hello!!!</h1><p>Your browser is %s</p>' % ua
-    return render_template('index.html', ua=ua, form=form, name=session.get('name'))
-
+    return render_template('index.html', form=form, name=session.get('name'), known=session.get('known'))
 
 
 @app.route('/user/<name>')
@@ -52,6 +92,6 @@ def internal_server_error(e):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
-    # manager.run()           # to run in command line as 'python3 ./run.py runserver'
+    # app.run(debug=True)
+    manager.run()           # to run in command line as 'python3 ./run.py runserver'
 
