@@ -3,9 +3,10 @@ from flask_mongoengine import MongoEngine
 from flask_script import Manager, Server
 from flask_bootstrap import Bootstrap
 from flask_wtf import Form
-from mongoengine import connect
+from flask_mail import Mail, Message
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
+import os
 
 
 class NameForm(Form):
@@ -15,8 +16,18 @@ class NameForm(Form):
 
 
 app = Flask(__name__)
+
 app.config['SECRET_KEY'] = 'secret_key'
 app.config['MONGODB_SETTINGS'] = {'DB': 'test'}
+app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['FLASKBOOK_ADMIN'] = os.environ.get('FLASKBOOK_ADMIN')
+app.config['FLASKBOOK_MAIL_SUBJECT_PREFIX'] = '[Flaskbook]'
+app.config['FLASKBOOK_MAIL_SENDER'] = 'Flaskbook Admin <ealesid@gmail.com>'
+
 manager = Manager(app)
 manager.add_command('runserver', Server(
     use_debugger=True,
@@ -24,8 +35,8 @@ manager.add_command('runserver', Server(
     host='0.0.0.0'
 ))
 bs = Bootstrap(app)
-
 db = MongoEngine(app)
+mail = Mail(app)
 
 class Role(db.Document):
     # id = db.IntField(primary_key=True)
@@ -67,11 +78,13 @@ def index():
             user = User(username=form.name.data)
             user.save()
             session['known'] = False
+            if app.config['FLASKBOOK_ADMIN']:
+                send_email(app.config['FLASKBOOK_ADMIN'], 'New user', 'mail/new_user', user=user)
         else: session['known'] = True
         session['name'] = form.name.data
         form.name.data = ''
         return redirect(url_for('index'))
-    return render_template('index.html', form=form, name=session.get('name'), known=session.get('known'))
+    return render_template('index.html', form=form, name=session.get('name'), known=session.get('known'), emailto=[os.environ.get('FLASKBOOK_ADMIN')])
 
 
 @app.route('/user/<name>')
@@ -90,6 +103,13 @@ def page_not_found(e):
 def internal_server_error(e):
     return render_template(('500.html')), 500
 
+
+def send_email(to, subject, template, **kwargs):
+    msg = Message(app.config['FLASKBOOK_MAIL_SUBJECT_PREFIX'] + subject,
+                   sender=app.config['FLASKBOOK_MAIL_SENDER'], recipients=[to])
+    msg.body = render_template(template + '.txt', **kwargs)
+    msg.html = render_template(template + '.html', **kwargs)
+    mail.send(msg)
 
 if __name__ == '__main__':
     # app.run(debug=True)

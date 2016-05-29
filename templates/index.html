@@ -5,6 +5,7 @@
 
 {% block page_content %}
 <div class="page-header">
+    <p>emailto: {{ emailto }}</p>
     <h1>Hello, {% if name %}{{ name|capitalize }}{% else %}Stranger{% endif %}!</h1>
     {% if not known %}
     <p>Pleased to meet you!</p>
