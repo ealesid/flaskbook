@@ -8,6 +8,7 @@ class Config:
     FLASKBOOK_MAIL_SENDER = 'Flaskbook Admin <ealesid@gmail.com>'
     FLASKBOOK_ADMIN = os.environ.get('FLASKBOOK_ADMIN')\
 
+
     @staticmethod
     def init_app(app):
         pass
