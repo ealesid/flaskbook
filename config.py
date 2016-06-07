@@ -6,7 +6,8 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'secret_key'
     FLASKBOOK_MAIL_SUBJECT_PREFIX = '[Flaskbook]'
     FLASKBOOK_MAIL_SENDER = 'Flaskbook Admin <ealesid@gmail.com>'
-    FLASKBOOK_ADMIN = os.environ.get('FLASKBOOK_ADMIN')\
+    FLASKBOOK_ADMIN = os.environ.get('FLASKBOOK_ADMIN')
+    DEBUG_TB_INTERCEPT_REDIRECTS = False
 
 
     @staticmethod

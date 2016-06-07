@@ -1,0 +1,12 @@
+Dear {{ user.username }},
+
+Welcome to Flaskbook!
+
+To confirm your account please click on the following link:
+
+{{ url_for('auth.confirm', token=token, _external=True) }}
+
+Sincerely,
+The Flaskbook Team
+
+Note: replies to this email are not monitored.
