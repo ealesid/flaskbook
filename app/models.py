@@ -23,6 +23,12 @@ class User(db.Document, UserMixin):
         raise AttributeError('Password is not readable attribute')
 
     @password.setter
+    def __repr__(self):
+        return '<User %r>' % self.username
+
+    def get_id(self):
+        return User.objects(username__exact=self.username).first()['username']
+
     def password(self, password):
         self.pasword_hash = generate_password_hash(password)
 
@@ -49,11 +55,19 @@ class User(db.Document, UserMixin):
         self.save()
         return True
 
-    def get_id(self):
-        return User.objects(username__exact=self.username).first()['username']
+    def generate_reset_token(self, expiration=3600):
+        s = Serializer(current_app.config['SECRET_KEY'], expiration)
+        return s.dumps({'reset': self.username})
 
-    def __repr__(self):
-        return '<User %r>' % self.username
+    def reset_password(self, token, new_password):
+        s = Serializer(current_app.config['SECRET_KEY'])
+        try: data = s.loads(token)
+        except: return False
+        if data.get('reset') != self.username:
+            return False
+        self.password_hash = generate_password_hash(new_password)
+        self.save()
+        return True
 
 
 @login_mananger.user_loader
