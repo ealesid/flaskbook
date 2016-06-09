@@ -43,7 +43,7 @@ class ChangePasswordForm(Form):
     submit = SubmitField('Update Password')
 
 
-class  PasswordResetRequestForm(Form):
+class PasswordResetRequestForm(Form):
     email = StringField('Email',
                         validators=[DataRequired(), Length(1, 64), Email()])
     submit = SubmitField('Reset Password')
@@ -67,3 +67,14 @@ class PasswordResetForm(Form):
     def validate_email(self, field):
         if User.objects(email__exact=field.data) is None:
             raise ValidationError('Unknown email address.')
+
+
+class ChangeEmailForm(Form):
+    email = StringField('New Email',
+                        validators=[DataRequired(), Length(1, 64), Email()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Update Email Address')
+
+    def validate_email(self, field):
+        if User.objects(email__exact=field.data).first():
+            raise ValidationError('Email already registered')
