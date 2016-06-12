@@ -1,5 +1,6 @@
 import unittest
 import time
+from datetime import datetime
 from app import db, create_app
 from app.models import User, AnonymousUser, Role, Permission
 
@@ -23,7 +24,7 @@ class UserModelTestCase(unittest.TestCase):
     def test_no_password_getter(self):
         u = User(password='cat')
         with self.assertRaises(AttributeError):
-            u.password
+            u.password()
 
     def test_password_verification(self):
         u = User(password='cat')
@@ -105,3 +106,17 @@ class UserModelTestCase(unittest.TestCase):
     def test_anonymous_user(self):
         u = AnonymousUser()
         self.assertFalse(u.can(Permission.FOLLOW))
+
+    def test_timestamps(self):
+        u = User(password='cat').save()
+        self.assertTrue(
+            (datetime.utcnow() - u.member_since).total_seconds() < 3)
+        self.assertTrue(
+            (datetime.utcnow() - u.last_seen).total_seconds() < 3)
+
+    def test_ping(self):
+        u = User(password='cat').save()
+        time.sleep(2)
+        last_seen_before = u.last_seen
+        u.ping()
+        self.assertTrue(u.last_seen > last_seen_before)

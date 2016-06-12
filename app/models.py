@@ -1,3 +1,4 @@
+from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app
@@ -17,7 +18,6 @@ class Role(db.Document):
     name = db.StringField(max_length=64, unique=True)
     default = db.BooleanField(default=False, index=True)
     permissions = db.IntField()
-    # users = db.ReferenceField(User)
 
     @staticmethod
     def insert_roles():
@@ -49,6 +49,12 @@ class User(db.Document, UserMixin):
     email = db.StringField(max_length=64, unique=True, index=True)
     confirmed = db.BooleanField(default=False)
     role = db.ReferenceField(Role)
+    name = db.StringField(max_length=64)
+    location = db.StringField(max_length=64)
+    about_me = db.StringField()
+    member_since = db.DateTimeField(default=datetime.utcnow)
+    last_seen = db.DateTimeField(default=datetime.utcnow)
+
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
@@ -136,6 +142,10 @@ class User(db.Document, UserMixin):
 
     def is_administrator(self):
         return self.can(Permission.ADMINISTER)
+
+    def ping(self):
+        self.last_seen = datetime.utcnow()
+        self.save()
 
 
 class AnonymousUser(AnonymousUserMixin):
