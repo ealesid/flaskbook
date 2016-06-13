@@ -55,7 +55,6 @@ class User(db.Document, UserMixin):
     member_since = db.DateTimeField(default=datetime.utcnow)
     last_seen = db.DateTimeField(default=datetime.utcnow)
 
-
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
         if self.role is None:
