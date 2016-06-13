@@ -174,3 +174,9 @@ login_mananger.anonymous_user = AnonymousUser
 @login_mananger.user_loader
 def load_user(username):
     return User.objects(username=username).first()
+
+
+class Post(db.Document):
+    body = db.StringField()
+    timestamp = db.DateTimeField(index=True, default=datetime.utcnow)
+    author_id = db.ReferenceField(User)

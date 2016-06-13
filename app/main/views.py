@@ -6,13 +6,21 @@ from flask_login import login_required, current_user
 from app.decorators import admin_required, permission_required
 from app.models import Permission
 from . import main
-from .forms import EditProfileForm, EditProfileAdminForm
-from ..models import Role, User
+from .forms import EditProfileForm, EditProfileAdminForm, PostForm
+from ..models import Role, User, Post
 
 
-@main.route('/')
+@main.route('/', methods=['GET', 'POST'])
 def index():
-    return render_template('index.html', emailto=[os.environ.get('FLASKBOOK_ADMIN')])
+    form = PostForm()
+    if current_user.can(Permission.WRITE_ARTICLES) and form.validate_on_submit():
+        post = Post(body=form.body.data,
+                    author_id=User.objects(username=current_user.username).first())
+        post.save()
+        return redirect(url_for('.index'))
+    posts = Post.objects().order_by('-timestamp')
+    return render_template('index.html', form=form, posts=posts)
+
 
 @main.route('/user/<username>')
 def user(username):
