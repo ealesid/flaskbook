@@ -1,4 +1,6 @@
 from datetime import datetime
+
+from mongoengine import NotUniqueError
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app, request
@@ -57,6 +59,25 @@ class User(db.Document, UserMixin):
     last_seen = db.DateTimeField(default=datetime.utcnow)
     avatar_hash = db.StringField(max_length=32)
 
+    @staticmethod
+    def generate_fake(count=100):
+        from random import seed
+        import forgery_py
+
+        seed()
+        for i in range(count):
+            u = User(email=forgery_py.internet.email_address(),
+                     username=forgery_py.internet.user_name(True),
+                     password_hash=generate_password_hash(forgery_py.lorem_ipsum.word()),
+                     confirmed=True,
+                     name=forgery_py.name.full_name(),
+                     location=forgery_py.address.city(),
+                     about_me=forgery_py.lorem_ipsum.sentence(),
+                     member_since=forgery_py.date.date(True))
+            try: u.save()
+            except NotUniqueError:
+                pass
+
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
         if self.role is None:
@@ -72,14 +93,11 @@ class User(db.Document, UserMixin):
         raise AttributeError('Password is not readable attribute')
 
     @password.setter
-    def __repr__(self):
-        return '<User %r>' % self.username
+    def password(self, password):
+        self.password_hash = generate_password_hash(password)
 
     def get_id(self):
         return User.objects(username=self.username).first()['username']
-
-    def password(self, password):
-        self.pasword_hash = generate_password_hash(password)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -180,3 +198,17 @@ class Post(db.Document):
     body = db.StringField()
     timestamp = db.DateTimeField(index=True, default=datetime.utcnow)
     author_id = db.ReferenceField(User)
+
+    @staticmethod
+    def generate_fake(count=100):
+        from random import seed, randint
+        import forgery_py
+
+        seed()
+        user_count = User.objects().count()
+        for i in range(count):
+            u = User.objects().skip(randint(0, user_count-1)).first()
+            p = Post(body=forgery_py.lorem_ipsum.sentences(randint(1, 5)),
+                     timestamp=forgery_py.date.date(True),
+                     author_id=u)
+            p.save()
