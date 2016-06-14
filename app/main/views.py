@@ -1,6 +1,4 @@
-import os
-
-from flask import render_template, flash, redirect, url_for
+from flask import render_template, flash, redirect, url_for, request, current_app
 from flask_login import login_required, current_user
 
 from app.decorators import admin_required, permission_required
@@ -18,15 +16,23 @@ def index():
                     author_id=User.objects(username=current_user.username).first())
         post.save()
         return redirect(url_for('.index'))
-    posts = Post.objects().order_by('-timestamp')
-    return render_template('index.html', form=form, posts=posts)
+    page = request.args.get('page', 1, type=int)
+    pagination = Post.objects.order_by('-timestamp').paginate(
+        page, per_page=current_app.config['FLASKBOOK_POSTS_PER_PAGE'],
+        error_out=False)
+    posts = pagination.items
+    return render_template('index.html', form=form, posts=posts, pagination=pagination)
 
 
 @main.route('/user/<username>')
 def user(username):
     user = User.objects(username=username).first_or_404()
-    posts = Post.objects(author_id=user)
-    return render_template('user.html', user=user, posts=posts)
+    page = request.args.get('page', 1, type=int)
+    pagination = Post.objects(author_id=user).order_by('-timestamp').paginate(
+        page, per_page=current_app.config['FLASKBOOK_POSTS_PER_PAGE'],
+        error_out=False)
+    posts = pagination.items
+    return render_template('user.html', user=user, posts=posts, pagination=pagination)
 
 
 @main.route('/admin')

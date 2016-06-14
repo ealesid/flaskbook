@@ -7,6 +7,7 @@ class Config:
     FLASKBOOK_MAIL_SUBJECT_PREFIX = '[Flaskbook]'
     FLASKBOOK_MAIL_SENDER = 'Flaskbook Admin <ealesid@gmail.com>'
     # FLASKBOOK_ADMIN = os.environ.get('FLASKBOOK_ADMIN')
+    FLASKBOOK_POSTS_PER_PAGE = 20
     DEBUG_TB_INTERCEPT_REDIRECTS = False
 
 
