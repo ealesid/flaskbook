@@ -5,7 +5,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app, request
 from flask_login import UserMixin, AnonymousUserMixin
-from . import db, login_mananger
+from . import db, login_manager
 import hashlib
 
 
@@ -186,10 +186,10 @@ class AnonymousUser(AnonymousUserMixin):
         return False
 
 
-login_mananger.anonymous_user = AnonymousUser
+login_manager.anonymous_user = AnonymousUser
 
 
-@login_mananger.user_loader
+@login_manager.user_loader
 def load_user(username):
     return User.objects(username=username).first()
 
