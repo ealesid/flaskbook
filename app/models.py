@@ -1,10 +1,11 @@
 from datetime import datetime
-
 from mongoengine import NotUniqueError
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app, request
 from flask_login import UserMixin, AnonymousUserMixin
+from markdown import markdown
+import bleach
 from . import db, login_manager
 import hashlib
 
@@ -196,6 +197,7 @@ def load_user(username):
 
 class Post(db.Document):
     body = db.StringField()
+    body_html = db.StringField()
     timestamp = db.DateTimeField(index=True, default=datetime.utcnow)
     author_id = db.ReferenceField(User)
 
@@ -212,3 +214,15 @@ class Post(db.Document):
                      timestamp=forgery_py.date.date(True),
                      author_id=u)
             p.save()
+
+    @staticmethod
+    def on_change_body(target, value, oldvalue, initiator):
+        allowed_tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'code',
+                        'em', 'i', 'li', 'ol', 'pre', 'strong', 'ul', 'p',
+                        'h1', 'h2', 'h3']
+        target.body_html = bleach.linkify(bleach.clean(
+            markdown(value, output_format='html'),
+            tags=allowed_tags, strip=True))
+
+# AttributeError: 'MongoEngine' object has no attribute 'event'
+# db.event.listen(Post.body, 'set', Post.on_change_body)
