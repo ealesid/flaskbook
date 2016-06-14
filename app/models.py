@@ -196,6 +196,7 @@ def load_user(username):
 
 
 class Post(db.Document):
+    _id = db.IntField()
     body = db.StringField()
     body_html = db.StringField()
     timestamp = db.DateTimeField(index=True, default=datetime.utcnow)
@@ -210,7 +211,7 @@ class Post(db.Document):
         user_count = User.objects().count()
         for i in range(count):
             u = User.objects().skip(randint(0, user_count-1)).first()
-            p = Post(body=forgery_py.lorem_ipsum.sentences(randint(1, 5)),
+            p = Post(_id=i+1, body=forgery_py.lorem_ipsum.sentences(randint(1, 5)),
                      timestamp=forgery_py.date.date(True),
                      author_id=u)
             p.save()

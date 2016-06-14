@@ -91,3 +91,9 @@ def edit_profile_admin(userid):
     form.location.data = user.location
     form.about_me.data = user.about_me
     return render_template('edit_profile.html', form=form, user=user)
+
+
+@main.route('/post/<int:id>')
+def post(id):
+    post = Post.objects(_id=id).first()
+    return render_template('post.html', posts=[post])
