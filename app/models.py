@@ -93,6 +93,15 @@ class User(db.Document, UserMixin):
     def password(self):
         raise AttributeError('Password is not readable attribute')
 
+    @property
+    def followed_posts(self):
+        user = User.objects(username=self.useraname).first()
+        pipeline = [{"$lookup": {"from": "post",
+                                 "localField": "followed",
+                                 "foreignField": "author_id",
+                                 "as": "followed_posts"}}]
+        return Follow.objects(follower=user).aggregate(*pipeline)
+
     @password.setter
     def password(self, password):
         self.password_hash = generate_password_hash(password)
