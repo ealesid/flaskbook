@@ -1,5 +1,5 @@
 from datetime import datetime
-from mongoengine import NotUniqueError
+from mongoengine import NotUniqueError, queryset_manager, Q
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app, request
@@ -178,6 +178,39 @@ class User(db.Document, UserMixin):
         return '{url}/{hash}?s={size}&d={default}&r={rating}'.format(
             url=url, hash=hash, size=size, default=default, rating=rating)
 
+    def follow(self, user):
+        if not Follow.is_following(self, user):
+            Follow(follower=self, followed=user, timestamp=datetime.utcnow()).save()
+
+    def unfollow(self, user):
+        Follow.objects().filter(Q(follower=self) & Q(followed=user)).first().delete()
+
+    def is_following(self, user):
+        return Follow.is_following(self, user).first() is not None
+
+    def is_followed(self, user):
+        return Follow.is_followed(self, user)
+
+    def count_followers(self):
+        return Follow.objects().filter(followed=self).count()
+
+    def count_followed(self):
+        return Follow.objects().filter(follower=self).count()
+
+
+class Follow(db.Document):
+    follower = db.ReferenceField(User)
+    followed = db.ReferenceField(User)
+    timestamp = db.DateTimeField()
+
+    @queryset_manager
+    def is_following(doc_cls, queryset, follower, followed):
+        return queryset(Q(follower=follower) & Q(followed=followed))
+
+    @queryset_manager
+    def is_followed(doc_cls, queryset, follower, followed):
+        return queryset(Q(followed=followed) & Q(follower=follower))
+
 
 class AnonymousUser(AnonymousUserMixin):
     def can(self, permissions):
@@ -196,7 +229,6 @@ def load_user(username):
 
 
 class Post(db.Document):
-    # _id = db.IntField()
     body = db.StringField()
     body_html = db.StringField()
     timestamp = db.DateTimeField(index=True, default=datetime.utcnow)

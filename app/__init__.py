@@ -5,7 +5,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from flask_login import LoginManager, login_required
 from flask_mail import Mail
 from flask_moment import Moment
-from flask_mongoengine import MongoEngine
+from flask_mongoengine import MongoEngine, MongoEngineSessionInterface
 from flask_pagedown import PageDown
 
 
@@ -28,9 +28,10 @@ def create_app(config_name):
     mail.init_app(app)
     moment.init_app(app)
     db.init_app(app)
+    app.session_interface = MongoEngineSessionInterface(db)
     login_manager.init_app(app)
     pagedown.init_app(app)
-    # toolbar.init_app(app)
+    toolbar.init_app(app)
 
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
