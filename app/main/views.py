@@ -118,7 +118,7 @@ def post(id):
     page = request.args.get('page', 1, type=int)
     if page == -1:
         page = (Comment.objects(post_id=post).count() - 1) // current_app.config['FLASKBOOK_COMMENTS_PER_PAGE'] + 1
-    pagination = Comment.objects(post_id=post).order_by('+Comment.timestamp').paginate(
+    pagination = Comment.objects(post_id=post).order_by('-timestamp').paginate(
         page, per_page=current_app.config['FLASKBOOK_COMMENTS_PER_PAGE'],
         error_out=False)
     comments = pagination.items
@@ -220,3 +220,36 @@ def show_followed():
     resp = make_response(redirect(url_for('.index')))
     resp.set_cookie('show_followed', '1', max_age=30*24*60*60)
     return resp
+
+
+@main.route('/moderate')
+@login_required
+@permission_required(Permission.MODERATE_COMMENTS)
+def moderate():
+    page = request.args.get('page', 1, type=int)
+    pagination = Comment.objects.order_by('-timestamp').paginate(
+        page, per_page=current_app.config['FLASKBOOK_COMMENTS_PER_PAGE'],
+        error_out=False)
+    comments = pagination.items
+    return render_template('moderate.html', comments=comments,
+                           pagination=pagination, page=page)
+
+
+@main.route('/moderate/enable/<string:id>')
+@login_required
+@permission_required(Permission.MODERATE_COMMENTS)
+def moderate_enable(id):
+    comment = Comment.objects(id=id).first_or_404()
+    comment.disabled = False
+    comment.save()
+    return redirect(url_for('.moderate', page=request.args.get('page', 1, type=int)))
+
+
+@main.route('/moderate/disable/<string:id>')
+@login_required
+@permission_required(Permission.MODERATE_COMMENTS)
+def moderate_disable(id):
+    comment = Comment.objects(id=id).first_or_404()
+    comment.disabled = True
+    comment.save()
+    return redirect(url_for('.moderate', page=request.args.get('page', 1, type=int)))
