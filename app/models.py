@@ -75,7 +75,8 @@ class User(db.Document, UserMixin):
                      location=forgery_py.address.city(),
                      about_me=forgery_py.lorem_ipsum.sentence(),
                      member_since=forgery_py.date.date(True))
-            try: u.save()
+            try:
+                u.save()
             except NotUniqueError:
                 pass
 
@@ -95,12 +96,19 @@ class User(db.Document, UserMixin):
 
     @property
     def followed_posts(self):
-        user = User.objects(username=self.useraname).first()
+        user = User.objects(username=self.username).first()
         pipeline = [{"$lookup": {"from": "post",
                                  "localField": "followed",
                                  "foreignField": "author_id",
-                                 "as": "followed_posts"}}]
-        return Follow.objects(follower=user).aggregate(*pipeline)
+                                 "as": "followed_posts"}},
+                    {"$unwind": "$followed_posts"},
+                    {"$project": {"_id": "$followed_posts._id",
+                                  "follower": 1,
+                                  "body": "$followed_posts.body",
+                                  "timestamp": "$followed_posts.timestamp",
+                                  "author_id": "$followed_posts.author_id"}},
+                    {"$out": "followed_posts"}]
+        Follow.objects(follower=user).aggregate(*pipeline)
 
     @password.setter
     def password(self, password):
@@ -182,7 +190,8 @@ class User(db.Document, UserMixin):
     def gravatar(self, size=100, default='identicon', rating='g'):
         if request.is_secure:
             url = 'https://secure.gravatar.com/avatar'
-        else: url = 'http://www.gravatar.com/avatar'
+        else:
+            url = 'http://www.gravatar.com/avatar'
         hash = self.avatar_hash or hashlib.md5(self.email.encode('utf-8')).hexdigest()
         return '{url}/{hash}?s={size}&d={default}&r={rating}'.format(
             url=url, hash=hash, size=size, default=default, rating=rating)
@@ -251,7 +260,7 @@ class Post(db.Document):
         seed()
         user_count = User.objects().count()
         for i in range(count):
-            u = User.objects().skip(randint(0, user_count-1)).first()
+            u = User.objects().skip(randint(0, user_count - 1)).first()
             p = Post(body=forgery_py.lorem_ipsum.sentences(randint(1, 5)),
                      timestamp=forgery_py.date.date(True),
                      author_id=u)
@@ -265,6 +274,14 @@ class Post(db.Document):
         target.body_html = bleach.linkify(bleach.clean(
             markdown(value, output_format='html'),
             tags=allowed_tags, strip=True))
+
+
+class FollowedPosts(db.Document):
+    follower = db.ReferenceField(User)
+    post = db.ReferenceField(Post)
+    timestamp = db.DateTimeField()
+    author_id = db.ReferenceField(User)
+    body = db.StringField()
 
 # AttributeError: 'MongoEngine' object has no attribute 'event'
 # db.event.listen(Post.body, 'set', Post.on_change_body)

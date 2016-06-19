@@ -1,11 +1,11 @@
-from flask import render_template, flash, redirect, url_for, request, current_app, abort
+from flask import render_template, flash, redirect, url_for, request, current_app, abort, make_response
 from flask_login import login_required, current_user
 
 from app.decorators import admin_required, permission_required
 from app.models import Permission
 from . import main
 from .forms import EditProfileForm, EditProfileAdminForm, PostForm
-from ..models import Role, User, Post, Follow
+from ..models import Role, User, Post, Follow, FollowedPosts
 
 
 @main.route('/', methods=['GET', 'POST'])
@@ -17,11 +17,20 @@ def index():
         post.save()
         return redirect(url_for('.index'))
     page = request.args.get('page', 1, type=int)
-    pagination = Post.objects.order_by('-timestamp').paginate(
+    show_followed = False
+    if current_user.is_authenticated:
+        show_followed = bool(request.cookies.get('show_followed', ''))
+    if show_followed:
+        current_user.followed_posts
+        query = FollowedPosts.objects
+    else: query = Post.objects
+    pagination = query.order_by('-timestamp').paginate(
         page, per_page=current_app.config['FLASKBOOK_POSTS_PER_PAGE'],
         error_out=False)
     posts = pagination.items
-    return render_template('index.html', form=form, posts=posts, pagination=pagination)
+    return render_template(
+        'index.html',
+        form=form, posts=posts, show_followed=show_followed, pagination=pagination)
 
 
 @main.route('/user/<username>')
@@ -177,3 +186,19 @@ def followed_by(username):
                for item in pagination.items]
     return render_template('followers.html', user=user, title='Followed by',
                            endpoint='.followed_by', pagination=pagination, follows=follows)
+
+
+@main.route('/all')
+@login_required
+def show_all():
+    resp = make_response(redirect(url_for('.index')))
+    resp.set_cookie('show_followed', '', max_age=30*24*60*60)
+    return resp
+
+
+@main.route('/followed')
+@login_required
+def show_followed():
+    resp = make_response(redirect(url_for('.index')))
+    resp.set_cookie('show_followed', '1', max_age=30*24*60*60)
+    return resp
