@@ -80,6 +80,13 @@ class User(db.Document, UserMixin):
             except NotUniqueError:
                 pass
 
+    @staticmethod
+    def add_self_follows():
+        for user in User.objects():
+            if not user.is_following(user):
+                user.follow(user)
+                user.save()
+
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
         if self.role is None:
@@ -89,6 +96,7 @@ class User(db.Document, UserMixin):
                 self.role = Role.objects(default=True).first()
         if self.email is not None and self.avatar_hash is None:
             self.avatar_hash = hashlib.md5(self.email.encode('utf-8')).hexdigest()
+        # self.follow(self)
 
     @property
     def password(self):
@@ -207,7 +215,7 @@ class User(db.Document, UserMixin):
         return Follow.is_following(self, user).first() is not None
 
     def is_followed(self, user):
-        return Follow.is_followed(self, user)
+        return Follow.is_followed(self, user) is not None
 
     def count_followers(self):
         return Follow.objects().filter(followed=self).count()
