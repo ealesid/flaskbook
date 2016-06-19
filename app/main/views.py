@@ -4,8 +4,8 @@ from flask_login import login_required, current_user
 from app.decorators import admin_required, permission_required
 from app.models import Permission
 from . import main
-from .forms import EditProfileForm, EditProfileAdminForm, PostForm
-from ..models import Role, User, Post, Follow, FollowedPosts
+from .forms import EditProfileForm, EditProfileAdminForm, PostForm, CommentForm
+from ..models import Role, User, Post, Follow, FollowedPosts, Comment
 
 
 @main.route('/', methods=['GET', 'POST'])
@@ -102,10 +102,28 @@ def edit_profile_admin(userid):
     return render_template('edit_profile.html', form=form, user=user)
 
 
-@main.route('/post/<string:id>')
+@main.route('/post/<string:id>', methods=['GET', 'POST'])
 def post(id):
     post = Post.objects(id=id).first()
-    return render_template('post.html', posts=[post])
+    form = CommentForm()
+    if form.validate_on_submit():
+        comment = Comment(body=form.body.data,
+                          post_id=post,
+                          author_id=current_user._get_current_object())
+        comment.save()
+        post.update(push__comments=comment)
+        current_user.update(push__comments=comment)
+        flash('Your comment has been published')
+        return redirect(url_for('.post', id=post.id, page=1))
+    page = request.args.get('page', 1, type=int)
+    if page == -1:
+        page = (Comment.objects(post_id=post).count() - 1) // current_app.config['FLASKBOOK_COMMENTS_PER_PAGE'] + 1
+    pagination = Comment.objects(post_id=post).order_by('+Comment.timestamp').paginate(
+        page, per_page=current_app.config['FLASKBOOK_COMMENTS_PER_PAGE'],
+        error_out=False)
+    comments = pagination.items
+    return render_template('post.html', posts=[post], form=form,
+                           comments=comments, pagination=pagination)
 
 
 @main.route('/edit/<string:id>', methods=['GET', 'POST'])

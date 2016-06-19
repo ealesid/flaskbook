@@ -10,6 +10,7 @@ class Config:
     # FLASKBOOK_ADMIN = os.environ.get('FLASKBOOK_ADMIN')
     FLASKBOOK_POSTS_PER_PAGE = 20
     FLASKBOOK_FOLLOWERS_PER_PAGE = 50
+    FLASKBOOK_COMMENTS_PER_PAGE = 30
     DEBUG_TB_PANELS = [
         'flask_debugtoolbar.panels.versions.VersionDebugPanel',
         'flask_debugtoolbar.panels.timer.TimerDebugPanel',

@@ -59,6 +59,7 @@ class User(db.Document, UserMixin):
     member_since = db.DateTimeField(default=datetime.utcnow)
     last_seen = db.DateTimeField(default=datetime.utcnow)
     avatar_hash = db.StringField(max_length=32)
+    comments = db.ListField(db.ReferenceField('Comment'))
 
     @staticmethod
     def generate_fake(count=100):
@@ -259,6 +260,7 @@ class Post(db.Document):
     body_html = db.StringField()
     timestamp = db.DateTimeField(index=True, default=datetime.utcnow)
     author_id = db.ReferenceField(User)
+    comments = db.ListField(db.ReferenceField('Comment'))
 
     @staticmethod
     def generate_fake(count=100):
@@ -293,3 +295,22 @@ class FollowedPosts(db.Document):
 
 # AttributeError: 'MongoEngine' object has no attribute 'event'
 # db.event.listen(Post.body, 'set', Post.on_change_body)
+
+
+class Comment(db.Document):
+    body = db.StringField()
+    body_html = db.StringField()
+    timestamp = db.DateTimeField(index=True, default=datetime.utcnow())
+    disabled = db.BooleanField()
+    author_id = db.ReferenceField(User)
+    post_id = db.ReferenceField(Post)
+
+    @staticmethod
+    def on_changed_body(target, value, oldvalue, initiator):
+        allowed_tags = ['a', 'abbr', 'acronym', 'b', 'code', 'em', 'i', 'strong']
+        target.body_html = bleach.linkify(bleach.clean(
+            markdown(value, output_format='html'),
+            tags=allowed_tags, strip=True))
+
+# AttributeError: 'MongoEngine' object has no attribute 'event'
+# db.event.listen(Comment.body, 'set', Comment.on_changed_body)
